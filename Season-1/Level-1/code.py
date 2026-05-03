@@ -12,18 +12,38 @@ Follow the instructions below to get started:
 '''
 
 from collections import namedtuple
+from decimal import Decimal, InvalidOperation
 
 Order = namedtuple('Order', 'id, items')
 Item = namedtuple('Item', 'type, description, amount, quantity')
 
+MAX_ORDER_AMOUNT = 1_000_000    # 한도 설정(100만 달러)
+
 def validorder(order: Order):
-    net = 0
+    net = Decimal(0)    # float 대신 Decimal로 정밀한 계산
 
     for item in order.items:
+        # 숫자 타입 검증
+        if not isinstance(item.amount, (int, float)):
+            return "Invalid amount: %s" % item.amount
+        if item.type == 'product' and not isinstance(item.quantity, (int, float)):
+            return "Invalid quantity: %s" % item.quantity
+        
+        # float -> Decimal 변환
+        try:
+            amount = Decimal(str(item.amount))
+            quantity = Decimal(str(item.quantity))
+        except InvalidOperation:
+            return "Invalid amount: %s" % item.amount
+
+        # 한도 초과 체크
+        if item.type == 'product' and abs(amount * quantity) > MAX_ORDER_AMOUNT:
+            return "Total amount payable for an order exceeded"
+
         if item.type == 'payment':
-            net += item.amount
+            net += amount
         elif item.type == 'product':
-            net -= item.amount * item.quantity
+            net -= amount * quantity
         else:
             return "Invalid item type: %s" % item.type
 
